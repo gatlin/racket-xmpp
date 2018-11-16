@@ -75,17 +75,21 @@
                                               password)]
            [(h p) (xmpp-open-tcp-connection h p use-tls? j password)])]
         [else
-         (xmpp-open-ssl-connection hostname
-                                   ssl-port-number
-                                   port-number
-                                   use-tls?
-                                   j
-                                   password)]))
+         (begin
+           (display "cool")
+           (xmpp-open-ssl-connection hostname
+                                     ssl-port-number
+                                     port-number
+                                     use-tls?
+                                     j
+                                     password))]))
 
 (define (xmpp-open-ssl-connection hostname ssl-port-number port-number use-tls? j password)
+  (display "xmpp-open-ssl-connection")
   (if (and use-tls? ssl-port-number)
       (with-handlers
         [(exn:fail:network? (lambda (e)
+                              (display e)
                               (xmpp-open-tcp-connection hostname
                                                         port-number
                                                         use-tls?
@@ -107,9 +111,7 @@
 
 (define (xmpp-open-session i o encrypted? use-tls? j password)
   (let ((features (restart-stream i o j)))
-    (if (and (not encrypted?)
-             use-tls?
-             (member '(starttls ((xmlns "urn:ietf:params:xml:ns:xmpp-tls"))) features))
+    (if (not encrypted?)
         (let-values (((si so) (negotiate-tls i o)))
           (define pi si)
           ;; (define-values (pi po) (make-pipe))
@@ -146,12 +148,13 @@
   (match response
     [`(failure ,_ ...) (xmpp-error "Authentication failure" #:stanza response)]
     [`(success ((xmlns "urn:ietf:params:xml:ns:xmpp-sasl")))
-     (define s (xmpp-session i o encrypted? (restart-stream i o j) j))
-     (bind s)]))
+     (bind (xmpp-session i o encrypted? (restart-stream i o j) j))]))
 
 (define (bind session)
-  (when (member '(bind ((xmlns "urn:ietf:params:xml:ns:xmpp-bind")))
+  (display (xmpp-session-features session))
+  (when (member '(bind ((xmlns "urn:ietf:params:xml:ns:xmpp-bind")) (required ()))
                 (xmpp-session-features session))
+
     (xmpp-send-iq/set session
                       `(bind ((xmlns "urn:ietf:params:xml:ns:xmpp-bind"))
                              ,@(let ((resource (jid-resource (xmpp-session-jid session))))
@@ -159,6 +162,9 @@
     (match (xmpp-receive session)
       [`(iq ,_ (bind ,_ (jid ,_ ,jidstr)))
        (set! session (struct-copy xmpp-session session [jid (string->jid jidstr)]))]))
+  (when (not (member '(bind ((xmlns "urn:ietf:params:xml:ns:xmpp-bind")) (required ()))
+                (xmpp-session-features session)))
+    (display "bad\n"))
   (when (member '(session ((xmlns "urn:ietf:params:xml:ns:xmpp-session")))
                 (xmpp-session-features session))
     (xmpp-send-iq/set session `(session ((xmlns "urn:ietf:params:xml:ns:xmpp-session"))))

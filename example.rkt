@@ -1,7 +1,7 @@
 #lang racket
 ;; Trivial CLI xmpp client.
 
-(require xmpp)
+(require "xmpp/main.rkt")
 
 (define-values (self-jid-str password)
   (let ((credentials-file "racket-xmpp-credentials.rktd"))
@@ -49,6 +49,13 @@
                          (void)]
                         [(pregexp "^ *$" (list _))
                          (loop target)]
+                        [(pregexp "^/disco$" (list _))
+                         (xmpp-send-iq/get
+                          s
+                          #:to target
+                          '(query ((xmlns
+                                    "http://jabber.org/protocol/disco#info"))))
+                         (loop target)]
                         [_
                          (if target
                              (xmpp-send-message s #:to target `(body ,line))
@@ -57,6 +64,12 @@
         (handle-evt (xmpp-receive-evt s)
                     (lambda (stanza)
                       (match stanza
+                        [`(iq ,_ (query ((xmlns
+                                          "http://jabber.org/protocol/disco#info"))))
+                         (xmpp-send-iq-reply
+                          s
+                          stanza
+                          '())]
                         [`(iq ,_ (ping ((xmlns "urn:xmpp:ping"))))
                          (printf "(got ping)\n")
                          (xmpp-send-iq-reply s stanza)]
