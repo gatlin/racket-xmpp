@@ -2,7 +2,8 @@
 
 ## Copyright and License
 
-Copyright &copy; 2016 Tony Garnock-Jones
+Copyright &copy; 2016 Tony Garnock-Jones.
+With contributions in 2018 by Gatlin Johnson.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
