@@ -56,6 +56,9 @@
                           '(query ((xmlns
                                     "http://jabber.org/protocol/disco#info"))))
                          (loop target)]
+                        [(pregexp "^/call$" (list _))
+                         (jingle-call s target)
+                         (loop target)]
                         [_
                          (if target
                              (xmpp-send-message s #:to target `(body ,line))
